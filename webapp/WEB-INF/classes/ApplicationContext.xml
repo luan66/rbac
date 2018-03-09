@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+        http://www.springframework.org/schema/beans 
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd
+        ">
+	<!-- 配置DI解析器 -->
+	<context:annotation-config/>
+	<!-- 配置IOC解析器 -->
+	<context:component-scan base-package="com._520it.rbac"/>
+	
+	
+	<!-- 01:配置获取SqlSessionFaction对象 -->
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<!-- 1:配置连接池 -->
+		<property name="dataSource" ref="dataSource"/>
+		<!-- 2:配置个性化: -->
+		<property name="configLocation" value="classpath:mybatis-config.xml"/>
+		<!-- 3:起别名: -->
+		<property name="typeAliasesPackage" value="com._520it.rbac.domain" />
+		<!-- 4:接在mapper接口xml文件: -->
+		<property name="mapperLocations" value="classpath:com/_520it/rbac/mapper/*Mapper.xml" />
+	</bean>	
+	
+	<!-- 02:配置连接池 -->
+	<bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource"
+		init-method="init" destroy-method="close">
+		<property name="driverClassName" value="${jdbc.driverClassName}"/>
+		<property name="url" value="${jdbc.url}"/>
+		<property name="username" value="${jdbc.username}"/>
+		<property name="password" value="${jdbc.password}"/>
+	</bean>
+	
+	
+	
+	<!-- 03:四要素 -->
+	<context:property-placeholder location="classpath:db.properties" system-properties-mode="NEVER"/>
+	
+	
+	
+	
+	<!-- 
+		04:配置获取mapper接口的注解  : 
+			获取mapper接口需要两个参数:
+				1:SqlSessionFactory对象
+				2:接口字节码对象;
+	-->
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<!-- 此句话代表在该包写的所有的mapper接口,spring框架自动给我们创建出来了!!! -->
+        <property name="basePackage" value="com._520it.rbac.mapper" />
+        <!-- 入一个项目中只有一个sqlSessionFactory对象,则这句话可以不用创建!!!! -->
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory" />
+    </bean>
+    
+    
+    
+    
+    <!-- 05:添加事务 :-->
+    <!-- 1:what -->
+    <bean id="txManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+    	<property name="dataSource" ref="dataSource" />
+    </bean>
+    <!-- 2:where -->
+    <aop:config>
+    	<aop:pointcut expression="execution(* com._520it.rbac.service.*Service.*(..))" id="pc"/>
+    	<aop:advisor advice-ref="txAdvice" pointcut-ref="pc"/>
+    </aop:config>
+	<!-- 3:when -->
+	<tx:advice id="txAdvice" transaction-manager="txManager">
+		<tx:attributes>
+			<tx:method name="get*" read-only="true"/>
+			<tx:method name="select*" read-only="true"/>
+			<tx:method name="query*" read-only="true"/>
+			<tx:method name="list*" read-only="true"/>
+			<tx:method name="*" propagation="REQUIRED"/>
+		</tx:attributes>
+	</tx:advice>
+
+
+</beans>

@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com._520it.rbac.mapper.EmployeeMapper">
+
+
+	<!-- 配置N+1映射: -->
+	<resultMap type="Employee" id="baseSingleMap">
+		<id column="id" property="id"/>
+		<result column="name" property="name"/>
+		<result column="password" property="password"/>
+		<result column="email" property="email"/>
+		<result column="age" property="age"/>
+		<result column="admin" property="admin"/>
+		<!-- 对应部门: -->
+		<association property="dept" column="dept" javaType="Department" 
+			select="com._520it.rbac.mapper.DepartmentMapper.get"/>
+		<!-- 对应角色: -->
+		<collection property="roles" column="id" ofType="Role"
+			select="com._520it.rbac.mapper.RoleMapper.getRoleByEmployeeId"/>
+	</resultMap>
+	
+	<!-- 配置内联的映射: -->
+	<resultMap type="Employee" id="baseListMap">
+		<id column="id" property="id"/>
+		<result column="name" property="name"/>
+		<result column="password" property="password"/>
+		<result column="email" property="email"/>
+		<result column="age" property="age"/>
+		<result column="admin" property="admin"/>
+		<association property="dept" javaType="Department">
+			<id column="d_id" property="id"/>
+			<result column="d_name" property="name"/>
+			<result column="d_sn" property="sn"/>
+		</association>
+	</resultMap>
+	
+
+	<!-- 添加一条数据 -->
+	<insert id="save" useGeneratedKeys="true" keyColumn="id" keyProperty="id">
+		insert into employee(name,password,email,age,admin,dept) values(#{name},#{password},#{email},#{age},#{admin},#{dept.id})
+	</insert>
+	<!-- 删除 -->
+	<delete id="delete">
+		delete from employee where id=#{id}
+	</delete>
+	<!-- 修改 -->
+	<update id="update">
+		update employee set 
+		name=#{name},
+		<if test="password != null and password != ''">
+			password=#{password},
+		</if>
+		email=#{email},
+		age=#{age},
+		admin=#{admin},
+		dept=#{dept.id} 
+		where id=#{id}
+	</update>
+	
+	<!-- 查询 : N+1语法:-->
+	<select id="get" resultMap="baseSingleMap">
+		select id,name,password,email,age,admin,dept from employee where id=#{id}
+	</select>
+ 	
+	<!-- 所有数据 : 内联 -->
+	<select id="getAll" resultMap="baseListMap">
+		select e.*,d.id d_id,d.name d_name, d.sn d_sn
+		from employee e left join department d on e.dept=d.id
+	</select>
+	
+	<!-- 条件查询:sql -->
+	<sql id="baseSql">
+		<where>
+			<if test="keyword != null and keyword != ''">
+				and (e.name like concat('%',#{keyword},'%') or e.email like concat('%',#{keyword},'%'))
+			</if>
+			<if test="deptId != null and deptId > 0">
+				and e.dept=#{deptId}
+			</if>
+		</where>
+	</sql>
+	
+	<!-- 分页:总数据数 -->
+	<select id="queryForCount" resultType="int">
+		select count(*) from employee e
+		<include refid="baseSql"/>
+	</select>
+	<!-- 分页:所有数据 -->
+	<select id="queryForList" resultMap="baseListMap">
+		select e.*,d.id d_id,d.name d_name, d.sn d_sn
+		from employee e left join department d on e.dept=d.id
+		<include refid="baseSql"/>
+		limit #{startIndex},#{pageSize}
+	</select>
+	
+	
+	<!-- 维护关系:用户也角色之间的关系 -->
+	<insert id="insertRelation">
+		insert into employee_role(employeeId,roleId) values(#{employeeId},#{roleId})
+	</insert>
+	<!-- 打破用户he角色之间的关系-->
+	<delete id="deleteRelation">
+		delete from employee_role where employeeId=#{id}
+	</delete>
+	
+	<!-- 登录效验 -->
+	<select id="getLogin" resultType="Employee">
+		select *
+		from employee
+		where name=#{username} and password=#{password}
+	</select>
+	
+	<!-- 获取当前用户的所有权限 -->
+	<select id="getPermissionByEmployeeId" resultType="String">
+		select expression from permission where id=#{id};
+	</select>
+</mapper>
+  

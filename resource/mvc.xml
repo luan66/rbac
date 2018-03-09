@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:mvc="http://www.springframework.org/schema/mvc" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+        http://www.springframework.org/schema/beans 
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/mvc 
+        http://www.springframework.org/schema/mvc/spring-mvc.xsd">
+
+	<!-- 1:映入spring基本配置 -->
+	<import resource="classpath:ApplicationContext.xml"/>
+	
+	<!-- 2:配置spring MVC配置注解: -->
+	<mvc:annotation-driven/>
+	
+	<!-- 3:配置资源路径前,后缀 -->
+	<bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="prefix" value="/WEB-INF/views/"/>
+		<property name="suffix" value=".jsp"/>
+	</bean>
+	
+	<!-- 4:拦截器: -->
+	<mvc:interceptors>
+		<!-- 01:登录拦截器 -->
+		<mvc:interceptor>
+			<!-- 匹配哪些资源 -->
+			<mvc:mapping path="/**"/>
+			<!-- 不匹配那些资源 -->
+			<mvc:exclude-mapping path="/login.do"/>
+			<!-- 拦截器 -->
+			<bean class="com._520it.rbac.web.interceptor.LoginInterceptor"/>
+		</mvc:interceptor>
+		<!-- 02:权限拦截器: -->
+		<mvc:interceptor>
+			<mvc:mapping path="/**"/>
+			<!-- 此时不需要把login.do去掉,因为该方法上没有注解,会自动放行; -->
+			<mvc:exclude-mapping path="/login.do"/>
+			<!-- 拦截器 -->
+			<bean class="com._520it.rbac.web.interceptor.PermissionInterceptor"/>
+		</mvc:interceptor>
+	</mvc:interceptors>
+	
+</beans>
